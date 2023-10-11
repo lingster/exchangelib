@@ -86,9 +86,7 @@ class Configuration:
 
     @threaded_cached_property
     def server(self):
-        if not self.service_endpoint:
-            return None
-        return split_url(self.service_endpoint)[1]
+        return split_url(self.service_endpoint)[1] if self.service_endpoint else None
 
     def __repr__(self):
         args_str = ", ".join(

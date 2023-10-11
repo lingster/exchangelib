@@ -230,8 +230,7 @@ class EWSTest(TimedTestCase, metaclass=abc.ABCMeta):
         if isinstance(field, AttendeesField):
             # Attendee must refer to a real mailbox on the server(?). We're only sure to have one
             mbx = Mailbox(email_address=self.account.primary_smtp_address)
-            with_last_response_time = get_random_bool()
-            if with_last_response_time:
+            if with_last_response_time := get_random_bool():
                 return [
                     Attendee(
                         mailbox=mbx,

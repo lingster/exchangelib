@@ -229,10 +229,8 @@ class AttachmentsTest(BaseItemTest):
         fresh_item = self.get_item_by_id(item)
         with fresh_item.attachments[0].fp as fp:
             chunked_reads = []
-            buffer = fp.read(7)
-            while buffer:
+            while buffer := fp.read(7):
                 chunked_reads.append(buffer)
-                buffer = fp.read(7)
             self.assertListEqual(chunked_reads, list(chunkify(large_binary_file_content, 7)))
 
     def test_streaming_file_attachment_error(self):

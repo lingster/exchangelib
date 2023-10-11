@@ -237,7 +237,9 @@ class ItemQuerySetTest(BaseItemTest):
         # Test negative index
         self.assertEqual(qs._copy_self()[-2].subject, "Subj 2")
         # Test positive slice
-        self.assertEqual([i.subject for i in qs._copy_self()[0:2]], ["Subj 0", "Subj 1"])
+        self.assertEqual(
+            [i.subject for i in qs._copy_self()[:2]], ["Subj 0", "Subj 1"]
+        )
         # Test positive slice
         self.assertEqual([i.subject for i in qs._copy_self()[2:4]], ["Subj 2", "Subj 3"])
         # Test positive open slice
@@ -253,7 +255,9 @@ class ItemQuerySetTest(BaseItemTest):
         # Test negative open slice
         self.assertEqual([i.subject for i in qs._copy_self()[-2:]], ["Subj 2", "Subj 3"])
         # Test positive slice with step
-        self.assertEqual([i.subject for i in qs._copy_self()[0:4:2]], ["Subj 0", "Subj 2"])
+        self.assertEqual(
+            [i.subject for i in qs._copy_self()[:4:2]], ["Subj 0", "Subj 2"]
+        )
         # Test negative slice with step
         self.assertEqual([i.subject for i in qs._copy_self()[4:0:-2]], ["Subj 3", "Subj 1"])
 

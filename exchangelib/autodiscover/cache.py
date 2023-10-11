@@ -138,11 +138,8 @@ class AutodiscoverCache:
 
     def __del__(self):
         # pylint: disable=bare-except
-        try:
+        with suppress(Exception):
             self.close()
-        except Exception:  # nosec
-            # __del__ should never fail
-            pass
 
     def __str__(self):
         return str(self._protocols)

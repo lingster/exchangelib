@@ -148,13 +148,15 @@ class Q:
                 # specifying a list value. We'll emulate it as a set of OR'ed exact matches.
                 if not is_iterable(value, generators_allowed=True):
                     raise TypeError(f"Value for lookup {key!r} must be of type {list}")
-                children = tuple(self.__class__(**{field_path: v}) for v in value)
-                if not children:
+                if children := tuple(
+                    self.__class__(**{field_path: v}) for v in value
+                ):
+                    return (self.__class__(*children, conn_type=self.OR),)
+
+                else:
                     # This is an '__in' operator with an empty list as the value. We interpret it to mean "is foo
                     # contained in the empty set?" which is always false. Mark this Q object as such.
                     return (self.__class__(conn_type=self.NEVER),)
-                return (self.__class__(*children, conn_type=self.OR),)
-
             if lookup == self.LOOKUP_CONTAINS and is_iterable(value, generators_allowed=True):
                 # A '__contains' lookup with a list as the value ony makes sense for list fields, since exact match
                 # on multiple distinct values will always fail for single-value fields.
@@ -337,8 +339,8 @@ class Q:
         if self.conn_type == self.NOT:
             # Add the NOT operator. Put children in parens if there is more than one child.
             if self.is_leaf() or len(self.children) == 1:
-                return self.conn_type + f" {expr}"
-            return self.conn_type + f" ({expr})"
+                return f"{self.conn_type} {expr}"
+            return f"{self.conn_type} ({expr})"
         return expr
 
     def to_xml(self, folders, version, applies_to):
@@ -525,10 +527,10 @@ class Q:
     def __repr__(self):
         if self.is_leaf():
             if self.query_string:
-                return self.__class__.__name__ + f"({self.query_string!r})"
+                return f"{self.__class__.__name__}({self.query_string!r})"
             if self.is_never():
-                return self.__class__.__name__ + f"(conn_type={self.conn_type!r})"
-            return self.__class__.__name__ + f"({self.field_path} {self.op} {self.value!r})"
+                return f"{self.__class__.__name__}(conn_type={self.conn_type!r})"
+            return f"{self.__class__.__name__}({self.field_path} {self.op} {self.value!r})"
         sorted_children = tuple(sorted(self.children, key=lambda i: i.field_path or ""))
         if self.conn_type == self.NOT or len(self.children) > 1:
             return self.__class__.__name__ + repr((self.conn_type,) + sorted_children)

@@ -128,13 +128,10 @@ class EWSService(SupportedVersionClassMixIn, metaclass=abc.ABCMeta):
 
     def __del__(self):
         # pylint: disable=bare-except
-        try:
+        with suppress(Exception):
             if self.streaming:
                 # Make sure to clean up lingering resources
                 self.stop_streaming()
-        except Exception:  # nosec
-            # __del__ should never fail
-            pass
 
     # The following two methods are the minimum required to be implemented by subclasses, but the name and number of
     # kwargs differs between services. Therefore, we cannot make these methods abstract.
@@ -204,11 +201,9 @@ class EWSService(SupportedVersionClassMixIn, metaclass=abc.ABCMeta):
         if api_version:
             request_server_version = create_element("t:RequestServerVersion", attrs=dict(Version=api_version))
             header.append(request_server_version)
-        identity = self._account_to_impersonate
-        if identity:
+        if identity := self._account_to_impersonate:
             add_xml_child(header, "t:ExchangeImpersonation", identity)
-        timezone = self._timezone
-        if timezone:
+        if timezone := self._timezone:
             timezone_context = create_element("t:TimeZoneContext")
             timezone_definition = create_element("t:TimeZoneDefinition", attrs=dict(Id=timezone.ms_id))
             timezone_context.append(timezone_definition)
@@ -536,8 +531,7 @@ class EWSService(SupportedVersionClassMixIn, metaclass=abc.ABCMeta):
             if code == "ErrorSchemaValidation" and msg_xml is not None:
                 line_number = get_xml_attr(msg_xml, f"{{{TNS}}}LineNumber")
                 line_position = get_xml_attr(msg_xml, f"{{{TNS}}}LinePosition")
-                violation = get_xml_attr(msg_xml, f"{{{TNS}}}Violation")
-                if violation:
+                if violation := get_xml_attr(msg_xml, f"{{{TNS}}}Violation"):
                     msg = f"{msg} {violation}"
                 if line_number or line_position:
                     msg = f"{msg} (line: {line_number} position: {line_position})"
@@ -685,8 +679,7 @@ class EWSService(SupportedVersionClassMixIn, metaclass=abc.ABCMeta):
             if isinstance(container_or_exc, (bool, Exception)):
                 yield container_or_exc
             else:
-                for c in self._get_elements_in_container(container=container_or_exc):
-                    yield c
+                yield from self._get_elements_in_container(container=container_or_exc)
 
     @classmethod
     def _get_elements_in_container(cls, container):
@@ -702,9 +695,7 @@ class EWSService(SupportedVersionClassMixIn, metaclass=abc.ABCMeta):
         If the service does not return response elements, return True to indicate the status. Errors have already been
         raised.
         """
-        if cls.returns_elements:
-            return list(container)
-        return [True]
+        return list(container) if cls.returns_elements else [True]
 
 
 class EWSAccountService(EWSService, metaclass=abc.ABCMeta):

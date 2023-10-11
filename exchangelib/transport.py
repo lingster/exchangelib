@@ -55,13 +55,7 @@ def get_auth_instance(auth_type, **kwargs):
     model = AUTH_TYPE_MAP[auth_type]
     if model is None:
         return None
-    if auth_type == GSSAPI:
-        # Kerberos auth relies on credentials supplied via a ticket available externally to this library
-        return model()
-    if auth_type == SSPI:
-        # SSPI auth does not require credentials, but can have it
-        return model(**kwargs)
-    return model(**kwargs)
+    return model() if auth_type == GSSAPI else model(**kwargs)
 
 
 def get_service_authtype(protocol):
@@ -149,11 +143,9 @@ def get_unauthenticated_autodiscover_response(protocol, method, headers=None, da
             except CONNECTION_ERRORS as e:
                 log.debug("Connection error on URL %s: %s", service_endpoint, e)
                 if not retry_policy.fail_fast:
-                    try:
+                    with suppress(RateLimitError):
                         retry_policy.back_off(wait)
                         continue
-                    except RateLimitError:
-                        pass
                 raise TransportError(str(e)) from e
             finally:
                 wait *= 2

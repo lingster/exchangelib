@@ -213,7 +213,7 @@ class AutodiscoverTest(EWSTest):
         )
         with self.assertRaises(ErrorNonExistentMailbox):
             Autodiscovery(
-                email="XXX." + self.account.primary_smtp_address,
+                email=f"XXX.{self.account.primary_smtp_address}",
                 credentials=self.account.protocol.credentials,
             ).discover()
 

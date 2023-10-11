@@ -292,13 +292,16 @@ class FolderCollection(SearchableMixIn):
         has_roots = False
         has_non_roots = False
         for f in self.folders:
-            if isinstance(f, RootOfHierarchy):
-                if has_non_roots:
-                    raise ValueError(f"Cannot call GetFolder on a mix of folder types: {self.folders}")
+            if (
+                isinstance(f, RootOfHierarchy)
+                and has_non_roots
+                or not isinstance(f, RootOfHierarchy)
+                and has_roots
+            ):
+                raise ValueError(f"Cannot call GetFolder on a mix of folder types: {self.folders}")
+            elif isinstance(f, RootOfHierarchy):
                 has_roots = True
             else:
-                if has_roots:
-                    raise ValueError(f"Cannot call GetFolder on a mix of folder types: {self.folders}")
                 has_non_roots = True
         return RootOfHierarchy if has_roots else Folder
 

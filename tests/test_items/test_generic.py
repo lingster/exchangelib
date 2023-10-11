@@ -468,10 +468,7 @@ class GenericItemTest(CommonItemTest):
         test_items = []
         for i in range(4):
             item = self.get_test_item()
-            if i % 2 == 0:
-                item.subject = f"Subj {i}"
-            else:
-                item.subject = None
+            item.subject = f"Subj {i}" if i % 2 == 0 else None
             test_items.append(item)
         self.test_folder.bulk_create(items=test_items)
         qs = QuerySet(folder_collection=FolderCollection(account=self.account, folders=[self.test_folder])).filter(
@@ -490,10 +487,7 @@ class GenericItemTest(CommonItemTest):
         for i in range(4):
             item = self.get_test_item()
             item.subject = self.categories[0]  # Make sure we have something unique to filter on
-            if i % 2 == 0:
-                item.categories = [f"Cat {i}"]
-            else:
-                item.categories = []
+            item.categories = [f"Cat {i}"] if i % 2 == 0 else []
             test_items.append(item)
         self.test_folder.bulk_create(items=test_items)
         qs = QuerySet(folder_collection=FolderCollection(account=self.account, folders=[self.test_folder])).filter(

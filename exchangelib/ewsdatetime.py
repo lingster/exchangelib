@@ -25,9 +25,7 @@ class EWSDate(datetime.date):
 
     def __add__(self, other):
         dt = super().__add__(other)
-        if isinstance(dt, self.__class__):
-            return dt
-        return self.from_date(dt)  # We want to return EWSDate objects
+        return dt if isinstance(dt, self.__class__) else self.from_date(dt)
 
     def __iadd__(self, other):
         return self + other
@@ -36,9 +34,7 @@ class EWSDate(datetime.date):
         dt = super().__sub__(other)
         if isinstance(dt, datetime.timedelta):
             return dt
-        if isinstance(dt, self.__class__):
-            return dt
-        return self.from_date(dt)  # We want to return EWSDate objects
+        return dt if isinstance(dt, self.__class__) else self.from_date(dt)
 
     def __isub__(self, other):
         return self - other
@@ -46,9 +42,7 @@ class EWSDate(datetime.date):
     @classmethod
     def fromordinal(cls, n):
         dt = super().fromordinal(n)
-        if isinstance(dt, cls):
-            return dt
-        return cls.from_date(dt)  # We want to return EWSDate objects
+        return dt if isinstance(dt, cls) else cls.from_date(dt)
 
     @classmethod
     def from_date(cls, d):
@@ -62,16 +56,11 @@ class EWSDate(datetime.date):
         if date_string.endswith("Z"):
             date_fmt = "%Y-%m-%dZ"
         elif ":" in date_string:
-            if "+" in date_string:
-                date_fmt = "%Y-%m-%d+%H:%M"
-            else:
-                date_fmt = "%Y-%m-%d-%H:%M"
+            date_fmt = "%Y-%m-%d+%H:%M" if "+" in date_string else "%Y-%m-%d-%H:%M"
         else:
             date_fmt = "%Y-%m-%d"
         d = datetime.datetime.strptime(date_string, date_fmt).date()
-        if isinstance(d, cls):
-            return d
-        return cls.from_date(d)  # We want to return EWSDate objects
+        return d if isinstance(d, cls) else cls.from_date(d)
 
 
 class EWSDateTime(datetime.datetime):
@@ -82,10 +71,7 @@ class EWSDateTime(datetime.datetime):
     def __new__(cls, *args, **kwargs):
         # pylint: disable=arguments-differ
 
-        if len(args) == 8:
-            tzinfo = args[7]
-        else:
-            tzinfo = kwargs.get("tzinfo")
+        tzinfo = args[7] if len(args) == 8 else kwargs.get("tzinfo")
         if isinstance(tzinfo, zoneinfo.ZoneInfo):
             # Don't allow pytz or dateutil timezones here. They are not safe to use as direct input for datetime()
             tzinfo = EWSTimeZone.from_timezone(tzinfo)
@@ -126,9 +112,7 @@ class EWSDateTime(datetime.datetime):
         if tz is None:
             tz = EWSTimeZone.localzone()
         t = super().astimezone(tz=tz).replace(tzinfo=tz)
-        if isinstance(t, self.__class__):
-            return t
-        return self.from_datetime(t)  # We want to return EWSDateTime objects
+        return t if isinstance(t, self.__class__) else self.from_datetime(t)
 
     @classmethod
     def fromisoformat(cls, date_string):
@@ -136,9 +120,7 @@ class EWSDateTime(datetime.datetime):
 
     def __add__(self, other):
         t = super().__add__(other)
-        if isinstance(t, self.__class__):
-            return t
-        return self.from_datetime(t)  # We want to return EWSDateTime objects
+        return t if isinstance(t, self.__class__) else self.from_datetime(t)
 
     def __iadd__(self, other):
         return self + other
@@ -147,9 +129,7 @@ class EWSDateTime(datetime.datetime):
         t = super().__sub__(other)
         if isinstance(t, datetime.timedelta):
             return t
-        if isinstance(t, self.__class__):
-            return t
-        return self.from_datetime(t)  # We want to return EWSDateTime objects
+        return t if isinstance(t, self.__class__) else self.from_datetime(t)
 
     def __isub__(self, other):
         return self - other
@@ -166,43 +146,31 @@ class EWSDateTime(datetime.datetime):
             raise NaiveDateTimeNotAllowed(local_dt)
         # This is probably a datetime value with time zone information. This comes in the form '+/-HH:MM'.
         aware_dt = datetime.datetime.fromisoformat(date_string).astimezone(UTC).replace(tzinfo=UTC)
-        if isinstance(aware_dt, cls):
-            return aware_dt
-        return cls.from_datetime(aware_dt)
+        return aware_dt if isinstance(aware_dt, cls) else cls.from_datetime(aware_dt)
 
     @classmethod
     def fromtimestamp(cls, t, tz=None):
         dt = super().fromtimestamp(t, tz=tz)
-        if isinstance(dt, cls):
-            return dt
-        return cls.from_datetime(dt)  # We want to return EWSDateTime objects
+        return dt if isinstance(dt, cls) else cls.from_datetime(dt)
 
     @classmethod
     def utcfromtimestamp(cls, t):
         dt = super().utcfromtimestamp(t)
-        if isinstance(dt, cls):
-            return dt
-        return cls.from_datetime(dt)  # We want to return EWSDateTime objects
+        return dt if isinstance(dt, cls) else cls.from_datetime(dt)
 
     @classmethod
     def now(cls, tz=None):
         t = super().now(tz=tz)
-        if isinstance(t, cls):
-            return t
-        return cls.from_datetime(t)  # We want to return EWSDateTime objects
+        return t if isinstance(t, cls) else cls.from_datetime(t)
 
     @classmethod
     def utcnow(cls):
         t = super().utcnow()
-        if isinstance(t, cls):
-            return t
-        return cls.from_datetime(t)  # We want to return EWSDateTime objects
+        return t if isinstance(t, cls) else cls.from_datetime(t)
 
     def date(self):
         d = super().date()
-        if isinstance(d, EWSDate):
-            return d
-        return EWSDate.from_date(d)  # We want to return EWSDate objects
+        return d if isinstance(d, EWSDate) else EWSDate.from_date(d)
 
 
 class EWSTimeZone(zoneinfo.ZoneInfo):
@@ -305,9 +273,7 @@ class EWSTimeZone(zoneinfo.ZoneInfo):
 
     def fromutc(self, dt):
         t = super().fromutc(dt)
-        if isinstance(t, EWSDateTime):
-            return t
-        return EWSDateTime.from_datetime(t)  # We want to return EWSDateTime objects
+        return t if isinstance(t, EWSDateTime) else EWSDateTime.from_datetime(t)
 
 
 UTC = EWSTimeZone("UTC")

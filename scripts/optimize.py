@@ -93,8 +93,8 @@ for i in range(1, 11):
     time.sleep(60)  # Sleep 1 minute. Performance will deteriorate over time if we give the server tie to recover
 
 print("\nTesting pool size")
+chunk_size = 10
 for i in range(1, 11):
-    chunk_size = 10
     account.protocol.poolsize = i
     test(calitems, chunk_size)
     time.sleep(60)

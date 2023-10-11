@@ -42,17 +42,16 @@ class BaseUpdateService(EWSAccountService, metaclass=abc.ABCMeta):
                 seen_labels.add(v.label)
                 for subfield in subfields:
                     field_path = FieldPath(field=field, label=v.label, subfield=subfield)
-                    subfield_value = getattr(v, subfield.name)
-                    if not subfield_value:
-                        # Generate delete elements for blank subfield values
-                        yield self._delete_field_elem(field_path=field_path)
-                    else:
+                    if subfield_value := getattr(v, subfield.name):
                         # Generate set elements for non-null subfield values
                         yield self._set_field_elem(
                             target_model=target_model,
                             field_path=field_path,
                             value=field.value_cls(**{"label": v.label, subfield.name: subfield_value}),
                         )
+                    else:
+                        # Generate delete elements for blank subfield values
+                        yield self._delete_field_elem(field_path=field_path)
                 # Generate delete elements for all subfields of all labels not mentioned in the list of values
                 for label in (label for label in supported_labels if label not in seen_labels):
                     for subfield in subfields:

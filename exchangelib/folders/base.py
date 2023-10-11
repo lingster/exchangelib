@@ -814,8 +814,7 @@ class Folder(BaseFolder):
 
     def __init__(self, **kwargs):
         self._root = kwargs.pop("root", None)  # This is a pointer to the root of the folder hierarchy
-        parent = kwargs.pop("parent", None)
-        if parent:
+        if parent := kwargs.pop("parent", None):
             if self.root:
                 if parent.root != self.root:
                     raise ValueError("'parent.root' must match 'root'")
@@ -828,9 +827,7 @@ class Folder(BaseFolder):
 
     @property
     def account(self):
-        if self.root is None:
-            return None
-        return self.root.account
+        return None if self.root is None else self.root.account
 
     @property
     def root(self):

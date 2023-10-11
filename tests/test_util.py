@@ -60,7 +60,7 @@ class UtilTest(EWSTest):
         seq = chain(*[[i] for i in range(5)])
         self.assertEqual(list(chunkify(seq, chunksize=2)), [[0, 1], [2, 3], [4]])
 
-        seq = (i for i in range(5))
+        seq = iter(range(5))
         self.assertEqual(list(chunkify(seq, chunksize=2)), [[0, 1], [2, 3], [4]])
 
     def test_peek(self):
@@ -97,9 +97,9 @@ class UtilTest(EWSTest):
         self.assertEqual((is_empty, list(seq)), (False, [1, 2, 3]))
 
         # generator
-        is_empty, seq = peek((i for i in ()))
+        is_empty, seq = peek(iter(()))
         self.assertEqual((is_empty, list(seq)), (True, []))
-        is_empty, seq = peek((i for i in (1, 2, 3)))
+        is_empty, seq = peek(iter((1, 2, 3)))
         self.assertEqual((is_empty, list(seq)), (False, [1, 2, 3]))
 
     @requests_mock.mock()
@@ -283,7 +283,7 @@ class UtilTest(EWSTest):
             with self.assertRaises(TransportError):
                 r, session = post_ratelimited(protocol=protocol, session=session, url=url, headers=None, data="")
             # Redirect header to relative location
-            session.post = mock_post(url, 302, {"location": url + "/foo"})
+            session.post = mock_post(url, 302, {"location": f"{url}/foo"})
             with self.assertRaises(RedirectError):
                 r, session = post_ratelimited(protocol=protocol, session=session, url=url, headers=None, data="")
             # Redirect header to other location and allow_redirects=False
