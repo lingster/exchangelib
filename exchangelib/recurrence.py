@@ -321,7 +321,7 @@ class Recurrence(EWSElement):
                 kwargs["boundary"] = NoEndPattern(start=start)
             elif start and end and not number:
                 kwargs["boundary"] = EndDatePattern(start=start, end=end)
-            elif start and number and not end:
+            elif start and not end:
                 kwargs["boundary"] = NumberedPattern(start=start, number=number)
             else:
                 raise ValueError("Unsupported 'start', 'end', 'number' combination")

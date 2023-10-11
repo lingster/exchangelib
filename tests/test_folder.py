@@ -618,10 +618,9 @@ class FolderTest(EWSTest):
         self.assertEqual(f.total_count, 0)
         self.assertEqual(f.unread_count, 0)
         self.assertEqual(f.child_folder_count, 0)
-        # Create some subfolders
-        subfolders = []
-        for i in range(3):
-            subfolders.append(Folder(parent=f, name=get_random_string(16)).save())
+        subfolders = [
+            Folder(parent=f, name=get_random_string(16)).save() for _ in range(3)
+        ]
         # Refresh values and see that child_folder_count changes
         f.refresh()
         self.assertEqual(f.total_count, 0)

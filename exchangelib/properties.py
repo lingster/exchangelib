@@ -179,7 +179,7 @@ class UID(bytes):
 
     def __new__(cls, uid):
         payload = binascii.hexlify(bytearray(f"vCal-Uid\x01\x00\x00\x00{uid}\x00".encode("ascii")))
-        length = binascii.hexlify(bytearray(struct.pack("<I", int(len(payload) / 2))))
+        length = binascii.hexlify(bytearray(struct.pack("<I", len(payload) // 2)))
         encoding = b"".join(
             [cls._HEADER, cls._EXCEPTION_REPLACEMENT_TIME, cls._CREATION_TIME, cls._RESERVED, length, payload]
         )
@@ -196,7 +196,7 @@ def _mangle(field_name):
 
 
 class EWSMeta(type, metaclass=abc.ABCMeta):
-    def __new__(mcs, name, bases, kwargs):
+    def __new__(cls, name, bases, kwargs):
         # Collect fields defined directly on the class
         local_fields = Fields()
         for k in tuple(kwargs.keys()):
@@ -226,8 +226,8 @@ class EWSMeta(type, metaclass=abc.ABCMeta):
         # Folder class, making the custom field available for subclasses).
         if local_fields:
             kwargs["FIELDS"] = fields
-        klass = super().__new__(mcs, name, bases, kwargs)
-        klass._slots_keys = mcs._get_slots_keys(klass)
+        klass = super().__new__(cls, name, bases, kwargs)
+        klass._slots_keys = cls._get_slots_keys(klass)
         return klass
 
     @staticmethod
@@ -1484,9 +1484,7 @@ class IdChangeKeyMixIn(EWSElement, metaclass=EWSMeta):
 
     @property
     def id(self):
-        if self._id is None:
-            return None
-        return self._id.id
+        return None if self._id is None else self._id.id
 
     @id.setter
     def id(self, value):
@@ -1496,9 +1494,7 @@ class IdChangeKeyMixIn(EWSElement, metaclass=EWSMeta):
 
     @property
     def changekey(self):
-        if self._id is None:
-            return None
-        return self._id.changekey
+        return None if self._id is None else self._id.changekey
 
     @changekey.setter
     def changekey(self, value):
@@ -1526,9 +1522,7 @@ class IdChangeKeyMixIn(EWSElement, metaclass=EWSMeta):
 
     def __hash__(self):
         # If we have an ID and changekey, use that as key. Else return a hash of all attributes
-        if self.id:
-            return hash((self.id, self.changekey))
-        return super().__hash__()
+        return hash((self.id, self.changekey)) if self.id else super().__hash__()
 
 
 class DictionaryEntry(EWSElement):
@@ -1737,9 +1731,7 @@ class TimestampEvent(Event, metaclass=EWSMeta):
     def event_type(self):
         if self.item_id is not None:
             return self.ITEM
-        if self.folder_id is not None:
-            return self.FOLDER
-        return None  # Empty object
+        return self.FOLDER if self.folder_id is not None else None
 
 
 class OldTimestampEvent(TimestampEvent, metaclass=EWSMeta):

@@ -171,10 +171,9 @@ class QuerySet(SearchableMixIn):
             # We didn't restrict list of field paths. Get all fields from the server, including extended properties.
             if self.request_type == self.PERSONA:
                 additional_fields = {}  # GetPersona doesn't take explicit fields. Don't bother calculating the list
-                complex_fields_requested = True
             else:
                 additional_fields = {FieldPath(field=f) for f in self.folder_collection.allowed_item_fields()}
-                complex_fields_requested = True
+            complex_fields_requested = True
         else:
             additional_fields = self._additional_fields()
             complex_fields_requested = any(f.field.is_complex for f in additional_fields)
@@ -405,8 +404,7 @@ class QuerySet(SearchableMixIn):
     #
     def all(self):
         """ """
-        new_qs = self._copy_self()
-        return new_qs
+        return self._copy_self()
 
     def none(self):
         """ """

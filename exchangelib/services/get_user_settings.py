@@ -33,8 +33,7 @@ class GetUserSettings(EWSService):
         action = f"http://schemas.microsoft.com/exchange/2010/Autodiscover/Autodiscover/{self.SERVICE_NAME}"
         add_xml_child(header, "wsa:Action", action)
         add_xml_child(header, "wsa:To", self.protocol.service_endpoint)
-        identity = self._account_to_impersonate
-        if identity:
+        if identity := self._account_to_impersonate:
             add_xml_child(header, "t:ExchangeImpersonation", identity)
         envelope.append(header)
         body = create_element("s:Body")

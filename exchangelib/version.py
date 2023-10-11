@@ -41,8 +41,8 @@ class Build:
             v = elem.get(xml_elem)
             if v is None:
                 v = get_xml_attr(elem, f"{{{ANS}}}{xml_elem}")
-                if v is None:
-                    raise ValueError()
+            if v is None:
+                raise ValueError()
             kwargs[k] = int(v)  # Also raises ValueError
         return cls(**kwargs)
 
@@ -218,8 +218,8 @@ class Version:
         info = header.find(f"{{{TNS}}}ServerVersionInfo")
         if info is None:
             info = header.find(f"{{{ANS}}}ServerVersionInfo")
-            if info is None:
-                raise TransportError(f"No ServerVersionInfo in header: {xml_to_str(header)!r}")
+        if info is None:
+            raise TransportError(f"No ServerVersionInfo in header: {xml_to_str(header)!r}")
         try:
             build = Build.from_xml(elem=info)
         except ValueError:
@@ -263,9 +263,7 @@ class Version:
             return False
         if self.build and not other.build:
             return False
-        if other.build and not self.build:
-            return False
-        return self.build == other.build
+        return False if other.build and not self.build else self.build == other.build
 
     def __repr__(self):
         return self.__class__.__name__ + repr((self.build, self.api_version))
@@ -317,6 +315,4 @@ def _supports_version(supported_from, deprecated_from, version):
     # 'version' is a Version instance, for convenience by callers
     if supported_from and version.build < supported_from:
         return False
-    if deprecated_from and version.build >= deprecated_from:
-        return False
-    return True
+    return not deprecated_from or version.build < deprecated_from

@@ -425,9 +425,7 @@ class BaseMeetingReplyItem(BaseItem, metaclass=EWSMeta):
                 raise r
         # CreateItem may return multiple item IDs when given a meeting reply item. See issue#886. In lack of a better
         # idea, return either the single ID or the list of IDs here.
-        if len(res) == 1:
-            return res[0]
-        return res
+        return res[0] if len(res) == 1 else res
 
 
 class AcceptItem(BaseMeetingReplyItem):

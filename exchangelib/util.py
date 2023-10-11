@@ -107,9 +107,8 @@ def is_iterable(value, generators_allowed=False):
     if generators_allowed:
         if not isinstance(value, (bytes, str)) and hasattr(value, "__iter__"):
             return True
-    else:
-        if isinstance(value, (tuple, list, set)):
-            return True
+    elif isinstance(value, (tuple, list, set)):
+        return True
     return False
 
 
@@ -173,9 +172,7 @@ def xml_to_str(tree, encoding=None, xml_declaration=False):
 
 def get_xml_attr(tree, name):
     elem = tree.find(name)
-    if elem is None:  # Must compare with None, see XML docs
-        return None
-    return elem.text or None
+    return None if elem is None else elem.text or None
 
 
 def get_xml_attrs(tree, name):
@@ -337,10 +334,7 @@ def prepare_input_source(source):
 
 
 def safe_b64decode(data):
-    # Incoming base64-encoded data is not always padded to a multiple of 4. Python's parser is stricter and requires
-    # padding. Add padding if it's needed.
-    overflow = len(data) % 4
-    if overflow:
+    if overflow := len(data) % 4:
         if isinstance(data, str):
             padding = "=" * (4 - overflow)
         else:
@@ -573,10 +567,10 @@ def is_xml(text):
         prefix = text[bom_len : bom_len + max_prefix_len]
     else:
         prefix = text[:max_prefix_len]
-    for expected_prefix in expected_prefixes:
-        if prefix[: len(expected_prefix)] == expected_prefix:
-            return True
-    return False
+    return any(
+        prefix[: len(expected_prefix)] == expected_prefix
+        for expected_prefix in expected_prefixes
+    )
 
 
 class PrettyXmlHandler(logging.StreamHandler):

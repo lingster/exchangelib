@@ -74,7 +74,6 @@ class BaseItemTest(EWSTest, metaclass=abc.ABCMeta):
                 self.test_folder.delete()
         except Exception as e:
             print(f"Exception in tearDown of {self}: {e}")
-            pass
         super().tearDown()
 
     def get_random_insert_kwargs(self):
@@ -128,8 +127,6 @@ class BaseItemTest(EWSTest, metaclass=abc.ABCMeta):
             if f.name == "recurrence":
                 continue
             if f.name == "due_date":
-                continue
-            if f.name == "start_date":
                 continue
             if f.name == "status":
                 # Start with an incomplete task
@@ -199,8 +196,6 @@ class BaseItemTest(EWSTest, metaclass=abc.ABCMeta):
             if f.name == "recurrence":
                 continue
             if f.name == "due_date":
-                continue
-            if f.name == "start_date":
                 continue
             if f.name == "status":
                 # Update task to a completed state
@@ -353,7 +348,7 @@ class CommonItemTest(BaseItemTest):
                         continue
                     for _ in range(5):
                         retries += 1
-                        time.sleep(retries * retries)  # Exponential sleep
+                        time.sleep(retries**2)
                         matches = qs.filter(**kw).count()
                         if matches == expected:
                             break
@@ -363,11 +358,11 @@ class CommonItemTest(BaseItemTest):
     def test_filter_on_simple_fields(self):
         # Test that we can filter on all simple fields
         item = self.get_test_item()
-        fields = []
-        for f in self._reduce_fields_for_filter(item, self.get_item_fields()):
-            if f.is_list:
-                continue
-            fields.append(f)
+        fields = [
+            f
+            for f in self._reduce_fields_for_filter(item, self.get_item_fields())
+            if not f.is_list
+        ]
         if not fields:
             self.skipTest("No matching simple fields on this model")
         item.save()
@@ -412,11 +407,11 @@ class CommonItemTest(BaseItemTest):
     def test_filter_on_single_field_index_fields(self):
         # Test that we can filter on all index fields
         item = self.get_test_item()
-        fields = []
-        for f in self._reduce_fields_for_filter(item, self.get_item_fields()):
-            if not issubclass(f.value_cls, SingleFieldIndexedElement):
-                continue
-            fields.append(f)
+        fields = [
+            f
+            for f in self._reduce_fields_for_filter(item, self.get_item_fields())
+            if issubclass(f.value_cls, SingleFieldIndexedElement)
+        ]
         if not fields:
             self.skipTest("No matching single index fields on this model")
         item.save()
@@ -444,11 +439,11 @@ class CommonItemTest(BaseItemTest):
     def test_filter_on_multi_field_index_fields(self):
         # Test that we can filter on all index fields
         item = self.get_test_item()
-        fields = []
-        for f in self._reduce_fields_for_filter(item, self.get_item_fields()):
-            if not issubclass(f.value_cls, MultiFieldIndexedElement):
-                continue
-            fields.append(f)
+        fields = [
+            f
+            for f in self._reduce_fields_for_filter(item, self.get_item_fields())
+            if issubclass(f.value_cls, MultiFieldIndexedElement)
+        ]
         if not fields:
             self.skipTest("No matching multi index fields on this model")
         item.save()
@@ -635,7 +630,7 @@ class CommonItemTest(BaseItemTest):
         insert_kwargs["categories"] = self.categories
         item = self.ITEM_CLASS(folder=self.test_folder, **insert_kwargs)
         # Test with generator as argument
-        insert_ids = self.test_folder.bulk_create(items=(i for i in (item,)))
+        insert_ids = self.test_folder.bulk_create(items=iter((item, )))
         self.assertEqual(len(insert_ids), 1)
         self.assertIsInstance(insert_ids[0], BaseItem)
         find_ids = list(self.test_folder.filter(categories__contains=item.categories).values_list("id", "changekey"))
@@ -643,7 +638,7 @@ class CommonItemTest(BaseItemTest):
         self.assertEqual(len(find_ids[0]), 2, find_ids[0])
         self.assertEqual(insert_ids, find_ids)
         # Test with generator as argument
-        item = list(self.account.fetch(ids=(i for i in find_ids), folder=self.test_folder))[0]
+        item = list(self.account.fetch(ids=iter(find_ids), folder=self.test_folder))[0]
         for f in self.ITEM_CLASS.FIELDS:
             with self.subTest(f=f):
                 if not f.supports_version(self.account.version):

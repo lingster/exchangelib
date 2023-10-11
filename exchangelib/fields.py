@@ -150,10 +150,10 @@ def resolve_field_path(field_path, folder, strict=True):
                 raise ValueError(
                     f"IndexedField path {field_path!r} must not specify subfield, e.g. just {fieldname}__{label}'"
                 )
-            subfield = field.value_cls.value_field(version=folder.account.version)
-    else:
-        if label or subfield_name:
-            raise ValueError(f"Field path {field_path!r} must not specify label or subfield, e.g. just {fieldname!r}")
+            else:
+                subfield = field.value_cls.value_field(version=folder.account.version)
+    elif label or subfield_name:
+        raise ValueError(f"Field path {field_path!r} must not specify label or subfield, e.g. just {fieldname!r}")
     return field, label, subfield
 
 
@@ -184,12 +184,16 @@ class FieldPath:
         # For indexed properties, get either the full property set, the property with matching label, or a particular
         # subfield.
         if self.label:
-            for sub_item in getattr(item, self.field.name):
-                if sub_item.label == self.label:
-                    if self.subfield:
-                        return getattr(sub_item, self.subfield.name)
-                    return sub_item
-            return None  # No item with this label
+            return next(
+                (
+                    getattr(sub_item, self.subfield.name)
+                    if self.subfield
+                    else sub_item
+                    for sub_item in getattr(item, self.field.name)
+                    if sub_item.label == self.label
+                ),
+                None,
+            )
         return getattr(item, self.field.name)
 
     def get_sort_value(self, item):
@@ -201,9 +205,10 @@ class FieldPath:
 
     def to_xml(self):
         if isinstance(self.field, IndexedField):
-            if not self.label or not self.subfield:
+            if self.label and self.subfield:
+                return self.subfield.field_uri_xml(field_uri=self.field.field_uri, label=self.label)
+            else:
                 raise ValueError(f"Field path for indexed field {self.field.name!r} is missing label and/or subfield")
-            return self.subfield.field_uri_xml(field_uri=self.field.field_uri, label=self.label)
         return self.field.field_uri_xml()
 
     def expand(self, version):
@@ -476,18 +481,18 @@ class EnumField(IntegerField):
             value = list(value)  # Convert to something we can index
             for i, v in enumerate(value):
                 if isinstance(v, str):
-                    if v not in self.enum:
+                    if v in self.enum:
+                        value[i] = self.enum.index(v) + 1
+                    else:
                         raise ValueError(f"List value {v!r} on field {self.name!r} must be one of {sorted(self.enum)}")
-                    value[i] = self.enum.index(v) + 1
             if not value:
                 raise ValueError(f"Value {value!r} on field {self.name!r} must not be empty")
             if len(value) > len(set(value)):
                 raise ValueError(f"List entries {value!r} on field {self.name!r} must be unique")
-        else:
-            if isinstance(value, str):
-                if value not in self.enum:
-                    raise ValueError(f"Value {value!r} on field {self.name!r} must be one of {sorted(self.enum)}")
-                value = self.enum.index(value) + 1
+        elif isinstance(value, str):
+            if value not in self.enum:
+                raise ValueError(f"Value {value!r} on field {self.name!r} must be one of {sorted(self.enum)}")
+            value = self.enum.index(value) + 1
         return super().clean(value, version=version)
 
     def as_string(self, value):
@@ -616,9 +621,7 @@ class DateTimeBackedDateField(DateField):
             return datetime.datetime.fromisoformat(val).date()
         # Revert to default parsing of datetime strings
         res = self._datetime_field.from_xml(elem=elem, account=account)
-        if res is None:
-            return res
-        return res.date()
+        return res if res is None else res.date()
 
     def to_xml(self, value, version):
         # Convert date to datetime
@@ -811,9 +814,7 @@ class MessageField(TextField):
         if reply is None:
             return None
         message = reply.find(f"{{{TNS}}}{self.INNER_ELEMENT_NAME}")
-        if message is None:
-            return None
-        return message.text
+        return None if message is None else message.text
 
     def to_xml(self, value, version):
         field_elem = create_element(self.request_tag())
@@ -916,9 +917,8 @@ class ChoiceField(CharField):
                     f"Choice {self.name!r} only supports server versions from {self.supported_from or '*'} to "
                     f"{self.deprecated_from or '*'} (server has {version})"
                 )
-        else:
-            if value in valid_choices:
-                return value
+        elif value in valid_choices:
+            return value
         raise ValueError(f"Invalid choice {value!r} for field {self.name!r}. Valid choices are {sorted(valid_choices)}")
 
     def supported_choices(self, version):
@@ -1294,9 +1294,7 @@ class NamedSubField(SubField):
     def from_xml(self, elem, account):
         field_elem = elem.find(self.response_tag())
         val = None if field_elem is None else field_elem.text or None
-        if val is not None:
-            return val
-        return self.default
+        return val if val is not None else self.default
 
     def to_xml(self, value, version):
         field_elem = create_element(self.request_tag())
@@ -1425,10 +1423,14 @@ class ExtendedPropertyField(Field):
 
     def from_xml(self, elem, account):
         extended_properties = elem.findall(self.value_cls.response_tag())
-        for extended_property in extended_properties:
-            if self.value_cls.is_property_instance(extended_property):
-                return self.value_cls.from_xml(elem=extended_property, account=account)
-        return self.default
+        return next(
+            (
+                self.value_cls.from_xml(elem=extended_property, account=account)
+                for extended_property in extended_properties
+                if self.value_cls.is_property_instance(extended_property)
+            ),
+            self.default,
+        )
 
     def to_xml(self, value, version):
         extended_property = create_element(self.value_cls.request_tag())

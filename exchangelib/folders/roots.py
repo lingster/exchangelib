@@ -287,8 +287,7 @@ class Root(RootOfHierarchy):
     def _get_candidate(self, folder_cls, folder_coll):
         # Look for a single useful folder of type folder_cls in folder_coll
         same_type = [f for f in folder_coll if f.__class__ == folder_cls]
-        are_distinguished = [f for f in same_type if f.is_distinguished]
-        if are_distinguished:
+        if are_distinguished := [f for f in same_type if f.is_distinguished]:
             candidates = are_distinguished
         else:
             candidates = [f for f in same_type if f.name.lower() in folder_cls.localized_names(self.account.locale)]
@@ -312,12 +311,7 @@ class PublicFoldersRoot(RootOfHierarchy):
     supported_from = EXCHANGE_2007_SP1
 
     def get_children(self, folder):
-        # EWS does not allow deep traversal of public folders, so self._folders_map will only populate the top-level
-        # subfolders. To traverse public folders at arbitrary depth, we need to get child folders on demand.
-
-        # Let's check if this folder already has any cached children. If so, assume we can just return those.
-        children = list(super().get_children(folder=folder))
-        if children:
+        if children := list(super().get_children(folder=folder)):
             # Return a generator like our parent does
             yield from children
             return

@@ -60,8 +60,8 @@ class PropertiesTest(TimedTestCase):
                             self.assertIn(
                                 f.name, all_slots, f"Field name {f.name!r} is not in __slots__ on model {cls.__name__}"
                             )
-                            value_cls = f.value_cls  # Make sure lazy imports work
                             if not isinstance(f, (TypeValueField, GenericEventListField)):
+                                value_cls = f.value_cls  # Make sure lazy imports work
                                 # All other fields must define a value type
                                 self.assertIsNotNone(value_cls)
                             field_names.add(f.name)

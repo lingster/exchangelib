@@ -189,9 +189,8 @@ class ExtendedProperty(EWSElement):
             for v in self.value:
                 if not isinstance(v, python_type):
                     raise TypeError(f"Field {self.__class__.__name__!r} list value {v!r} must be of type {python_type}")
-        else:
-            if not isinstance(self.value, python_type):
-                raise TypeError(f"Field {self.__class__.__name__!r} value {self.value!r} must be of type {python_type}")
+        elif not isinstance(self.value, python_type):
+            raise TypeError(f"Field {self.__class__.__name__!r} value {self.value!r} must be of type {python_type}")
 
     @classmethod
     def _normalize_obj(cls, obj):

@@ -153,11 +153,8 @@ class BaseProtocol:
 
     def __del__(self):
         # pylint: disable=bare-except
-        try:
+        with suppress(Exception):
             self.close()
-        except Exception:  # nosec
-            # __del__ should never fail
-            pass
 
     def close(self):
         log.debug("Server %s: Closing sessions", self.server)
@@ -296,23 +293,24 @@ class BaseProtocol:
                 raise ValueError(f"Auth type {self.auth_type!r} requires credentials")
             session = self.raw_session(self.service_endpoint)
             session.auth = get_auth_instance(auth_type=self.auth_type)
+        elif isinstance(self.credentials, BaseOAuth2Credentials):
+            with self.credentials.lock:
+                session = self.create_oauth2_session()
+                # Keep track of the credentials used to create this session. If and when we need to renew
+                # credentials (for example, refreshing an OAuth access token), this lets us easily determine whether
+                # the credentials have already been refreshed in another thread by the time this session tries.
+                session.credentials_sig = self.credentials.sig()
         else:
-            if isinstance(self.credentials, BaseOAuth2Credentials):
-                with self.credentials.lock:
-                    session = self.create_oauth2_session()
-                    # Keep track of the credentials used to create this session. If and when we need to renew
-                    # credentials (for example, refreshing an OAuth access token), this lets us easily determine whether
-                    # the credentials have already been refreshed in another thread by the time this session tries.
-                    session.credentials_sig = self.credentials.sig()
-            else:
-                if self.auth_type == NTLM and self.credentials.type == self.credentials.EMAIL:
-                    username = "\\" + self.credentials.username
-                else:
-                    username = self.credentials.username
-                session = self.raw_session(self.service_endpoint)
-                session.auth = get_auth_instance(
-                    auth_type=self.auth_type, username=username, password=self.credentials.password
-                )
+            username = (
+                "\\" + self.credentials.username
+                if self.auth_type == NTLM
+                and self.credentials.type == self.credentials.EMAIL
+                else self.credentials.username
+            )
+            session = self.raw_session(self.service_endpoint)
+            session.auth = get_auth_instance(
+                auth_type=self.auth_type, username=username, password=self.credentials.password
+            )
 
         # Add some extra info
         session.session_id = random.randint(10000, 99999)  # Used for debugging messages in services
@@ -425,23 +423,23 @@ class CachingProtocol(type):
         # safe.
         return config.service_endpoint, config.credentials
 
-    def __getitem__(cls, config):
-        return cls._protocol_cache[cls._cache_key(config)]
+    def __getitem__(self, config):
+        return self._protocol_cache[self._cache_key(config)]
 
-    def __delitem__(cls, config):
-        del cls._protocol_cache[cls._cache_key(config)]
+    def __delitem__(self, config):
+        del self._protocol_cache[self._cache_key(config)]
 
     @classmethod
-    def clear_cache(mcs):
-        with mcs._protocol_cache_lock:
-            for key, (protocol, _) in mcs._protocol_cache.items():
+    def clear_cache(cls):
+        with cls._protocol_cache_lock:
+            for key, (protocol, _) in cls._protocol_cache.items():
                 if isinstance(protocol, Exception):
                     continue
                 service_endpoint = key[0]
                 log.debug("Service endpoint '%s': Closing sessions", service_endpoint)
                 with protocol._session_pool_lock:
                     protocol.close()
-            mcs._protocol_cache.clear()
+            cls._protocol_cache.clear()
 
 
 class Protocol(BaseProtocol, metaclass=CachingProtocol):
@@ -670,8 +668,7 @@ class RetryPolicy(metaclass=abc.ABCMeta):
             # Some genius at Microsoft thinks it's OK to send a valid SOAP response as an HTTP 500
             log.debug("Got status code %s but trying to parse content anyway", response.status_code)
             return
-        cas_error = response.headers.get("X-CasErrorCode")
-        if cas_error:
+        if cas_error := response.headers.get("X-CasErrorCode"):
             if cas_error.startswith("CAS error:"):
                 # Remove unnecessary text
                 cas_error = cas_error.split(":", 1)[1].strip()
@@ -799,8 +796,6 @@ class FaultTolerance(RetryPolicy):
         try:
             return super().raise_response_errors(response)
         except (ErrorInternalServerTransientError, ErrorServerBusy) as e:
-            # Pass on the retry header value
-            retry_after = _get_retry_after(response)
-            if retry_after:
+            if retry_after := _get_retry_after(response):
                 raise ErrorServerBusy(e.args[0], back_off=retry_after)
             raise

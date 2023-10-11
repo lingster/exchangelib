@@ -95,8 +95,7 @@ class FolderQuerySet:
 
     def all(self):
         """ """
-        new_qs = self._copy_self()
-        return new_qs
+        return self._copy_self()
 
     def filter(self, *args, **kwargs):
         """Add restrictions to the folder search."""
